@@ -111,8 +111,6 @@ void KyraEngine_LoK::seq_intro() {
 
 	_seq->setCopyViewOffs(true);
 	_screen->setFont(_flags.lang == Common::JA_JPN ? Screen::FID_SJIS_FNT : Screen::FID_8_FNT);
-	if (_flags.platform != Common::kPlatformFMTowns && _flags.platform != Common::kPlatformPC98 && _flags.platform != Common::kPlatformAmiga)
-		snd_playTheme(0, 2);
 	_text->setTalkCoords(144);
 
 	for (int i = 0; i < ARRAYSIZE(introProcTable) && !seq_skipSequence(); ++i) {
@@ -159,6 +157,9 @@ bool KyraEngine_LoK::seq_introPublisherLogos() {
 }
 
 bool KyraEngine_LoK::seq_introLogos() {
+	if (_flags.platform == Common::kPlatformPC)
+		snd_playTheme(0, 2);
+
 	_screen->clearPage(0);
 
 	if (_flags.platform == Common::kPlatformAmiga) {

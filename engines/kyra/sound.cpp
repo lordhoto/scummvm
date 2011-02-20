@@ -192,7 +192,7 @@ void KyraEngine_v1::snd_playWanderScoreViaMap(int command, int restart) {
 	//	XXX
 	//}
 
-	if (_flags.platform == Common::kPlatformPC || _flags.platform == Common::kPlatformMacintosh) {
+	if (_flags.platform == Common::kPlatformPC) {
 		assert(command*2+1 < _trackMapSize);
 		if (_curMusicTheme != _trackMap[command*2]) {
 			if (_trackMap[command*2] != -1 && _trackMap[command*2] != -2)
@@ -217,7 +217,7 @@ void KyraEngine_v1::snd_playWanderScoreViaMap(int command, int restart) {
 				_sound->playTrack(command);
 			}
 		}
-	} else if (_flags.platform == Common::kPlatformAmiga) {
+	} else if (_flags.platform == Common::kPlatformAmiga || _flags.platform == Common::kPlatformMacintosh) {
 		if (_curMusicTheme != 1)
 			snd_playTheme(1, -1);
 

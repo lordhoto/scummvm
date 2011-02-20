@@ -202,6 +202,9 @@ Common::Error KyraEngine_LoK::init() {
 	if (_flags.platform == Common::kPlatformAmiga) {
 		_trackMap = _amigaTrackMap;
 		_trackMapSize = _amigaTrackMapSize;
+	} else if (_flags.platform == Common::kPlatformMacintosh) {
+		_trackMap = _macTrackMap2;
+		_trackMapSize = _macTrackMap2Size;
 	} else {
 		_trackMap = _dosTrackMap;
 		_trackMapSize = _dosTrackMapSize;

@@ -42,6 +42,10 @@ class PCSpeaker;
 class MaxTrax;
 } // End of namespace Audio
 
+namespace Common {
+class MacResManager;
+} // End of namespace Common
+
 namespace Kyra {
 class MidiOutput;
 
@@ -294,7 +298,7 @@ public:
 	SoundAmiga(KyraEngine_v1 *vm, Audio::Mixer *mixer);
 	~SoundAmiga();
 
-	virtual kType getMusicType() const { return kAmiga; } //FIXME
+	kType getMusicType() const { return kAmiga; }
 
 	bool init();
 
@@ -319,6 +323,56 @@ protected:
 
 	const AmigaSfxTable *_tableSfxGame;
 	int _tableSfxGame_Size;
+};
+
+class SoundMac : public Sound {
+public:
+	SoundMac(KyraEngine_v1 *vm, Audio::Mixer *mixer, MidiDriver *driver);
+	~SoundMac();
+
+	kType getMusicType() const { return kMidiGM; }
+
+	bool init();
+
+	void loadSoundFile(uint file);
+	void loadSoundFile(Common::String file) {}
+
+	void playTrack(uint8 track);
+	void haltTrack();
+
+	void playSoundEffect(uint8 track);
+
+	void beginFadeOut();
+
+private:
+	Common::SeekableReadStream *queryFile(const uint32 type, const uint16 id);
+
+	MidiDriver *_driver;
+	MidiParser *_musicFile;
+
+	static void dumpSONGInfo(Common::SeekableReadStream *file);
+
+	Common::MacResManager *_sources[2];
+
+	static const uint16 _introEffectMap[];
+	static const int _introEffectMapSize;
+
+	static const uint16 _gameEffectMap[];
+	static const int _gameEffectMapSize;
+
+	const uint16 *_currentEffectMap;
+	int _currentEffectMapSize;
+
+	static const uint16 _scoreMap[];
+	static const int _scoreMapSize;
+
+	static const bool _ingameScoreLoopFlag[];
+	static const int _ingameScoreLoopFlagSize;
+
+	uint _setupFile;
+
+	const uint16 *_currentScoreMap;
+	int _currentScoreMapSize;
 };
 
 } // End of namespace Kyra

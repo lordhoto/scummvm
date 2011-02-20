@@ -53,6 +53,7 @@ MODULE_OBJS := \
 	sound_adlib.o \
 	sound_amiga.o \
 	sound_digital.o \
+	sound_mac.o \
 	sound_midi.o \
 	sound_pcspk.o \
 	sound_towns.o \

@@ -125,6 +125,8 @@ Common::Error KyraEngine_v1::init() {
 				_sound = new SoundTownsPC98_v2(this, _mixer);
 		} else if (_flags.platform == Common::kPlatformAmiga) {
 			_sound = new SoundAmiga(this, _mixer);
+		} else if (_flags.platform == Common::kPlatformMacintosh && _flags.gameID == GI_KYRA1) {
+			_sound = new SoundMac(this, _mixer, MidiDriver::createMidi(dev));
 		} else if (MidiDriver::getMusicType(dev) == MT_ADLIB) {
 			_sound = new SoundAdLibPC(this, _mixer);
 		} else {

@@ -59,6 +59,7 @@ public:
 	int		_numEntries;
 	int		_entriesPerPage;
 	int		_currentPos;
+	bool	_wantsFocus;
 
 public:
 	ScrollBarWidget(GuiObject *boss, int x, int y, int w, int h);
@@ -78,6 +79,7 @@ public:
 
 	void checkBounds(int old_pos);
 
+	virtual bool wantsFocus() { return _wantsFocus; }
 protected:
 	void drawWidget();
 };

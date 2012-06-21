@@ -85,6 +85,8 @@ private:
 	void updateSelection(bool redraw);
 };
 
+class ScrollBarWidget;
+
 class LoadChooserThumbnailed : public SaveLoadChooserDialog {
 public:
 	LoadChooserThumbnailed(const Common::String &title);
@@ -98,7 +100,6 @@ public:
 	virtual void close();
 protected:
 	virtual void handleCommand(GUI::CommandSender *sender, uint32 cmd, uint32 data);
-	virtual void handleMouseWheel(int x, int y, int direction);
 private:
 	virtual int runIntern();
 
@@ -107,8 +108,7 @@ private:
 	uint _curPage;
 	SaveStateList _saveList;
 
-	GUI::ButtonWidget *_nextButton;
-	GUI::ButtonWidget *_prevButton;
+	GUI::ScrollBarWidget *_scrollBar;
 
 	struct SlotButton {
 		SlotButton() : container(0), button(0), description(0) {}

@@ -45,6 +45,7 @@ ScrollBarWidget::ScrollBarWidget(GuiObject *boss, int x, int y, int w, int h)
 	_numEntries = 0;
 	_entriesPerPage = 0;
 	_currentPos = 0;
+	_wantsFocus = false;
 
 	_repeatTimer = 0;
 }

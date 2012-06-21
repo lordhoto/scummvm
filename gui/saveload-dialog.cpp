@@ -25,6 +25,7 @@
 #include "gui/message.h"
 #include "gui/gui-manager.h"
 #include "gui/ThemeEval.h"
+#include "gui/widgets/scrollbar.h"
 
 #include "graphics/scaler.h"
 
@@ -379,11 +380,6 @@ void SaveLoadChooserSimple::updateSaveList() {
 
 // LoadChooserThumbnailed implementation
 
-enum {
-	kNextCmd = 'NEXT',
-	kPrevCmd = 'PREV'
-};
-
 LoadChooserThumbnailed::LoadChooserThumbnailed(const Common::String &title)
 	: SaveLoadChooserDialog("SaveLoadChooser"), _lines(0), _columns(0), _entriesPerPage(0),
 	_curPage(0), _buttons() {
@@ -392,12 +388,12 @@ LoadChooserThumbnailed::LoadChooserThumbnailed(const Common::String &title)
 	new StaticTextWidget(this, "SaveLoadChooser.Title", title);
 
 	// Buttons
-	new GUI::ButtonWidget(this, "SaveLoadChooser.Delete", _("Cancel"), 0, kCloseCmd);
-	_nextButton = new GUI::ButtonWidget(this, "SaveLoadChooser.Choose", _("Next"), 0, kNextCmd);
-	_nextButton->setEnabled(false);
+	new GUI::ButtonWidget(this, "SaveLoadChooser.Choose", _("Cancel"), 0, kCloseCmd);
 
-	_prevButton = new GUI::ButtonWidget(this, "SaveLoadChooser.Cancel", _("Prev"), 0, kPrevCmd);
-	_prevButton->setEnabled(false);
+	_scrollBar = new GUI::ScrollBarWidget(this, 0, 0, _w, _h);
+	_scrollBar->setTarget(this);
+	_scrollBar->setFlags(WIDGET_RETAIN_FOCUS);
+	_scrollBar->_wantsFocus = true;
 }
 
 const Common::String &LoadChooserThumbnailed::getResultString() const {
@@ -413,14 +409,8 @@ void LoadChooserThumbnailed::handleCommand(GUI::CommandSender *sender, uint32 cm
 	}
 
 	switch (cmd) {
-	case kNextCmd:
-		++_curPage;
-		updateSaves();
-		draw();
-		break;
-
-	case kPrevCmd:
-		--_curPage;
+	case kSetPositionCmd:
+		_curPage = _scrollBar->_currentPos;
 		updateSaves();
 		draw();
 		break;
@@ -429,22 +419,6 @@ void LoadChooserThumbnailed::handleCommand(GUI::CommandSender *sender, uint32 cm
 		setResult(-1);
 	default:
 		SaveLoadChooserDialog::handleCommand(sender, cmd, data);
-	}
-}
-
-void LoadChooserThumbnailed::handleMouseWheel(int x, int y, int direction) {
-	if (direction > 0) {
-		if (_nextButton->isEnabled()) {
-			++_curPage;
-			updateSaves();
-			draw();
-		}
-	} else {
-		if (_prevButton->isEnabled()) {
-			--_curPage;
-			updateSaves();
-			draw();
-		}
 	}
 }
 
@@ -459,12 +433,14 @@ void LoadChooserThumbnailed::reflowLayout() {
 	SaveLoadChooserDialog::reflowLayout();
 	destroyButtons();
 
-	const uint16 availableWidth = getWidth() - 20;
+	const int scrollBarWidth = g_gui.xmlEval()->getVar("Globals.Scrollbar.Width", 0);
+	const uint16 availableWidth = getWidth() - 20 - scrollBarWidth;
 	uint16 availableHeight;
 
 	int16 x, y;
 	uint16 w;
 	g_gui.xmlEval()->getWidgetData("SaveLoadChooser.List", x, y, w, availableHeight);
+	_scrollBar->resize(getWidth() - scrollBarWidth, y, scrollBarWidth, availableHeight);
 
 	const int16 buttonWidth = kThumbnailWidth + 6;
 	const int16 buttonHeight = kThumbnailHeight2 + 6;
@@ -540,7 +516,6 @@ void LoadChooserThumbnailed::hideButtons() {
 		i->button->setGfx(0);
 		i->setVisible(false);
 	}
-
 }
 
 void LoadChooserThumbnailed::updateSaves() {
@@ -585,15 +560,10 @@ void LoadChooserThumbnailed::updateSaves() {
 		curButton.button->setTooltip(tooltip);
 	}
 
-	if (_curPage > 0)
-		_prevButton->setEnabled(true);
-	else
-		_prevButton->setEnabled(false);
-
-	if ((_curPage + 1) * _entriesPerPage < _saveList.size())
-		_nextButton->setEnabled(true);
-	else
-		_nextButton->setEnabled(false);
+	_scrollBar->_numEntries = (_saveList.size() + _entriesPerPage - 1) / _entriesPerPage;
+	_scrollBar->_entriesPerPage = 1;
+	_scrollBar->_currentPos = _curPage;
+	_scrollBar->recalc();
 }
 
 } // End of namespace GUI

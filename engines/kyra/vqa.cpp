@@ -60,18 +60,18 @@ static uint32 readTag(Common::SeekableReadStream *stream) {
 
 // -----------------------------------------------------------------------
 
-VqaDecoder::VqaDecoder() {
+VQADecoder::VQADecoder() {
 }
 
-VqaDecoder::~VqaDecoder() {
+VQADecoder::~VQADecoder() {
 	close();
 }
 
-bool VqaDecoder::loadStream(Common::SeekableReadStream *stream) {
+bool VQADecoder::loadStream(Common::SeekableReadStream *stream) {
 	close();
 
 	if (stream->readUint32BE() != MKTAG('F','O','R','M')) {
-		warning("VqaDecoder::loadStream(): Cannot find `FORM' tag");
+		warning("VQADecoder::loadStream(): Cannot find `FORM' tag");
 		return false;
 	}
 
@@ -80,11 +80,11 @@ bool VqaDecoder::loadStream(Common::SeekableReadStream *stream) {
 	stream->readUint32BE();
 
 	if (stream->readUint32BE() != MKTAG('W','V','Q','A')) {
-		warning("VqaDecoder::loadStream(): Cannot find `WVQA' tag");
+		warning("VQADecoder::loadStream(): Cannot find `WVQA' tag");
 		return false;
 	}
 
-	VqaVideoTrack *videoTrack = new VqaDecoder::VqaVideoTrack(stream);
+	VQAVideoTrack *videoTrack = new VQADecoder::VQAVideoTrack(stream);
 	addTrack(videoTrack);
 
 	// We want to find both a VQHD chunk containing the header, and a FINF
@@ -93,7 +93,7 @@ bool VqaDecoder::loadStream(Common::SeekableReadStream *stream) {
 	bool foundVQHD = false;
 	bool foundFINF = false;
 
-	VqaAudioTrack *audioTrack = NULL;
+	VQAAudioTrack *audioTrack = NULL;
 
 	// The information we need is stored in two chunks: VQHD and FINF. We
 	// need both of them before we can begin decoding the movie.
@@ -106,7 +106,7 @@ bool VqaDecoder::loadStream(Common::SeekableReadStream *stream) {
 		case MKTAG('V','Q','H','D'):
 			videoTrack->handleVQHD();
 			if (videoTrack->hasSound()) {
-				audioTrack = new VqaAudioTrack(stream, videoTrack->getAudioFreq());
+				audioTrack = new VQAAudioTrack(stream, videoTrack->getAudioFreq());
 				videoTrack->setAudioTrack(audioTrack);
 				addTrack(audioTrack);
 			}
@@ -114,18 +114,18 @@ bool VqaDecoder::loadStream(Common::SeekableReadStream *stream) {
 			break;
 		case MKTAG('F','I','N','F'):
 			if (!foundVQHD) {
-				warning("VqaDecoder::loadStream(): Found `FINF' before `VQHD'");
+				warning("VQADecoder::loadStream(): Found `FINF' before `VQHD'");
 				return false;
 			}
 			if (size != 4 * getFrameCount()) {
-				warning("VqaDecoder::loadStream(): Expected size %d for `FINF' chunk, but got %u", 4 * getFrameCount(), size);
+				warning("VQADecoder::loadStream(): Expected size %d for `FINF' chunk, but got %u", 4 * getFrameCount(), size);
 				return false;
 			}
 			videoTrack->handleFINF();
 			foundFINF = true;
 			break;
 		default:
-			warning("VqaDecoder::loadStream(): Unknown tag `%s'", tag2str(tag));
+			warning("VQADecoder::loadStream(): Unknown tag `%s'", tag2str(tag));
 			stream->seek(size, SEEK_CUR);
 			break;
 		}
@@ -136,27 +136,27 @@ bool VqaDecoder::loadStream(Common::SeekableReadStream *stream) {
 
 // -----------------------------------------------------------------------
 
-VqaDecoder::VqaAudioTrack::VqaAudioTrack(Common::SeekableReadStream *stream, int freq) {
+VQADecoder::VQAAudioTrack::VQAAudioTrack(Common::SeekableReadStream *stream, int freq) {
 	_fileStream = stream;
 	_audioStream = Audio::makeQueuingAudioStream(freq, false);
 }
 
-VqaDecoder::VqaAudioTrack::~VqaAudioTrack() {
+VQADecoder::VQAAudioTrack::~VQAAudioTrack() {
 	delete _audioStream;
 }
 
-Audio::AudioStream *VqaDecoder::VqaAudioTrack::getAudioStream() const {
+Audio::AudioStream *VQADecoder::VQAAudioTrack::getAudioStream() const {
 	return _audioStream;
 }
 
-void VqaDecoder::VqaAudioTrack::handleSND0() {
+void VQADecoder::VQAAudioTrack::handleSND0() {
 	uint32 size = _fileStream->readUint32BE();
 	byte *buf = (byte *)malloc(size);
 	_fileStream->read(buf, size);
 	_audioStream->queueBuffer(buf, size, DisposeAfterUse::YES, Audio::FLAG_UNSIGNED);
 }
 
-void VqaDecoder::VqaAudioTrack::handleSND1() {
+void VQADecoder::VQAAudioTrack::handleSND1() {
 	_fileStream->readUint32BE();
 	uint16 outsize = _fileStream->readUint16LE();
 	uint16 insize = _fileStream->readUint16LE();
@@ -242,15 +242,15 @@ void VqaDecoder::VqaAudioTrack::handleSND1() {
 	}
 }
 
-void VqaDecoder::VqaAudioTrack::handleSND2() {
+void VQADecoder::VQAAudioTrack::handleSND2() {
 	uint32 size = _fileStream->readUint32BE();
-	warning("VqaDecoder::VqaAudioTrack::handleSND2(): `SND2' is not implemented");
+	warning("VQADecoder::VQAAudioTrack::handleSND2(): `SND2' is not implemented");
 	_fileStream->seek(size, SEEK_CUR);
 }
 
 // -----------------------------------------------------------------------
 
-VqaDecoder::VqaVideoTrack::VqaVideoTrack(Common::SeekableReadStream *stream) {
+VQADecoder::VQAVideoTrack::VQAVideoTrack(Common::SeekableReadStream *stream) {
 	_fileStream = stream;
 	_surface = new Graphics::Surface();
 	memset(_palette, 0, sizeof(_palette));
@@ -271,61 +271,61 @@ VqaDecoder::VqaVideoTrack::VqaVideoTrack(Common::SeekableReadStream *stream) {
 	_vectorPointers = NULL;
 }
 
-VqaDecoder::VqaVideoTrack::~VqaVideoTrack() {
+VQADecoder::VQAVideoTrack::~VQAVideoTrack() {
 	delete _surface;
 	delete[] _frameInfo;
 	delete[] _codeBook;
 	delete[] _partialCodeBook;
 	delete[] _vectorPointers;
-	// The audio track gets deleted by VqaDecoder.
+	// The audio track gets deleted by VQADecoder.
 }
 
-uint16 VqaDecoder::VqaVideoTrack::getWidth() const {
+uint16 VQADecoder::VQAVideoTrack::getWidth() const {
 	return _header.width;
 }
 
-uint16 VqaDecoder::VqaVideoTrack::getHeight() const {
+uint16 VQADecoder::VQAVideoTrack::getHeight() const {
 	return _header.height;
 }
 
-Graphics::PixelFormat VqaDecoder::VqaVideoTrack::getPixelFormat() const {
+Graphics::PixelFormat VQADecoder::VQAVideoTrack::getPixelFormat() const {
 	return _surface->format;
 }
 
-int VqaDecoder::VqaVideoTrack::getCurFrame() const {
+int VQADecoder::VQAVideoTrack::getCurFrame() const {
 	return _curFrame;
 }
 
-int VqaDecoder::VqaVideoTrack::getFrameCount() const {
+int VQADecoder::VQAVideoTrack::getFrameCount() const {
 	return _header.numFrames;
 }
 
-Common::Rational VqaDecoder::VqaVideoTrack::getFrameRate() const {
+Common::Rational VQADecoder::VQAVideoTrack::getFrameRate() const {
 	return _header.frameRate;
 }
 
-bool VqaDecoder::VqaVideoTrack::hasSound() const {
+bool VQADecoder::VQAVideoTrack::hasSound() const {
 	return (_header.flags & 1) != 0;
 }
 
-int VqaDecoder::VqaVideoTrack::getAudioFreq() const {
+int VQADecoder::VQAVideoTrack::getAudioFreq() const {
 	return _header.freq;
 }
 
-bool VqaDecoder::VqaVideoTrack::hasDirtyPalette() const {
+bool VQADecoder::VQAVideoTrack::hasDirtyPalette() const {
 	return _dirtyPalette;
 }
 
-const byte *VqaDecoder::VqaVideoTrack::getPalette() const {
+const byte *VQADecoder::VQAVideoTrack::getPalette() const {
 	_dirtyPalette = false;
 	return _palette;
 }
 
-void VqaDecoder::VqaVideoTrack::setAudioTrack(VqaAudioTrack *audioTrack) {
+void VQADecoder::VQAVideoTrack::setAudioTrack(VQAAudioTrack *audioTrack) {
 	_audioTrack = audioTrack;
 }
 
-const Graphics::Surface *VqaDecoder::VqaVideoTrack::decodeNextFrame() {
+const Graphics::Surface *VQADecoder::VQAVideoTrack::decodeNextFrame() {
 	// Stop if reading the tag is enough to put us ahead of the next frame
 	int32 end = (_frameInfo[_curFrame + 1] & 0x7FFFFFFF) - 7;
 
@@ -366,7 +366,7 @@ const Graphics::Surface *VqaDecoder::VqaVideoTrack::decodeNextFrame() {
 			_fileStream->seek(size, SEEK_CUR);
 			break;
 		default:
-			warning("VqaDecoder::VqaVideoTrack::decodeNextFrame(): Unknown tag `%s'", tag2str(tag));
+			warning("VQADecoder::VQAVideoTrack::decodeNextFrame(): Unknown tag `%s'", tag2str(tag));
 			size = _fileStream->readUint32BE();
 			_fileStream->seek(size, SEEK_CUR);
 			break;
@@ -422,7 +422,7 @@ const Graphics::Surface *VqaDecoder::VqaVideoTrack::decodeNextFrame() {
 	return _surface;
 }
 
-void VqaDecoder::VqaVideoTrack::handleVQHD() {
+void VQADecoder::VQAVideoTrack::handleVQHD() {
 	_header.version     = _fileStream->readUint16LE();
 	_header.flags       = _fileStream->readUint16LE();
 	_header.numFrames   = _fileStream->readUint16LE();
@@ -487,7 +487,7 @@ void VqaDecoder::VqaVideoTrack::handleVQHD() {
 	}
 }
 
-void VqaDecoder::VqaVideoTrack::handleFINF() {
+void VQADecoder::VQAVideoTrack::handleFINF() {
 	for (int i = 0; i < _header.numFrames; i++) {
 		_frameInfo[i] = 2 * _fileStream->readUint32LE();
 	}
@@ -526,7 +526,7 @@ void VqaDecoder::VqaVideoTrack::handleFINF() {
 	_frameInfo[_header.numFrames] = 0x7FFFFFFF;
 }
 
-void VqaDecoder::VqaVideoTrack::handleVQFR() {
+void VQADecoder::VQAVideoTrack::handleVQFR() {
 	uint32 size = _fileStream->readUint32BE();
 	int32 end = _fileStream->pos() + size - 8;
 	byte *inbuf;
@@ -582,7 +582,7 @@ void VqaDecoder::VqaVideoTrack::handleVQFR() {
 			free(inbuf);
 			break;
 		default:
-			warning("VqaDecoder::VqaVideoTrack::handleVQFR(): Unknown `VQFR' sub-tag `%s'", tag2str(tag));
+			warning("VQADecoder::VQAVideoTrack::handleVQFR(): Unknown `VQFR' sub-tag `%s'", tag2str(tag));
 			_fileStream->seek(size, SEEK_CUR);
 			break;
 		}
@@ -591,37 +591,37 @@ void VqaDecoder::VqaVideoTrack::handleVQFR() {
 
 // -----------------------------------------------------------------------
 
-VqaMovie::VqaMovie(KyraEngine_v1 *vm, OSystem *system) {
+VQAMovie::VQAMovie(KyraEngine_v1 *vm, OSystem *system) {
 	_system = system;
 	_vm = vm;
 	_screen = _vm->screen();
-	_decoder = new VqaDecoder();
+	_decoder = new VQADecoder();
 	_drawPage = -1;
 }
 
-VqaMovie::~VqaMovie() {
+VQAMovie::~VQAMovie() {
 	close();
 	delete _decoder;
 }
 
-void VqaMovie::setDrawPage(int page) {
+void VQAMovie::setDrawPage(int page) {
 	_drawPage = page;
 }
 
-bool VqaMovie::open(const char *filename) {
+bool VQAMovie::open(const char *filename) {
 	if (_file.open(filename)) {
 		return true;
 	}
 	return false;
 }
 
-void VqaMovie::close() {
+void VQAMovie::close() {
 	if (_file.isOpen()) {
 		_file.close();
 	}
 }
 
-void VqaMovie::play() {
+void VQAMovie::play() {
 	if (_decoder->loadStream(&_file)) {
 		Common::EventManager *eventMan = _vm->getEventManager();
 		int width = _decoder->getWidth();

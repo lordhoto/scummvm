@@ -38,18 +38,18 @@ namespace Kyra {
 class KyraEngine_v1;
 class Screen;
 
-class VqaDecoder : public Video::VideoDecoder {
+class VQADecoder : public Video::VideoDecoder {
 public:
-	VqaDecoder();
-	virtual ~VqaDecoder();
+	VQADecoder();
+	virtual ~VQADecoder();
 
 	bool loadStream(Common::SeekableReadStream *stream);
 
 private:
-	class VqaAudioTrack : public AudioTrack {
+	class VQAAudioTrack : public AudioTrack {
 	public:
-		VqaAudioTrack(Common::SeekableReadStream *stream, int freq);
-		~VqaAudioTrack();
+		VQAAudioTrack(Common::SeekableReadStream *stream, int freq);
+		~VQAAudioTrack();
 
 		void handleSND0();
 		void handleSND1();
@@ -63,10 +63,10 @@ private:
 		Common::SeekableReadStream *_fileStream;
 	};
 
-	class VqaVideoTrack : public FixedRateVideoTrack {
+	class VQAVideoTrack : public FixedRateVideoTrack {
 	public:
-		VqaVideoTrack(Common::SeekableReadStream *stream);
-		~VqaVideoTrack();
+		VQAVideoTrack(Common::SeekableReadStream *stream);
+		~VQAVideoTrack();
 
 		uint16 getWidth() const;
 		uint16 getHeight() const;
@@ -80,7 +80,7 @@ private:
 		bool hasDirtyPalette() const;
 		const byte *getPalette() const;
 
-		void setAudioTrack(VqaAudioTrack *audioTrack);
+		void setAudioTrack(VQAAudioTrack *audioTrack);
 
 		void handleVQHD();
 		void handleFINF();
@@ -94,7 +94,7 @@ private:
 		Graphics::Surface *_surface;
 		byte _palette[3 * 256];
 		mutable bool _dirtyPalette;
-		VqaAudioTrack *_audioTrack;
+		VQAAudioTrack *_audioTrack;
 
 		int _curFrame;
 
@@ -134,10 +134,10 @@ private:
 	};
 };
 
-class VqaMovie {
+class VQAMovie {
 public:
-	VqaMovie(KyraEngine_v1 *vm, OSystem *system);
-	~VqaMovie();
+	VQAMovie(KyraEngine_v1 *vm, OSystem *system);
+	~VQAMovie();
 
 	void setDrawPage(int page);
 
@@ -148,7 +148,7 @@ private:
 	OSystem *_system;
 	KyraEngine_v1 *_vm;
 	Screen *_screen;
-	VqaDecoder *_decoder;
+	VQADecoder *_decoder;
 	Common::File _file;
 
 	int _drawPage;

@@ -658,7 +658,7 @@ void VQAMovie::play() {
 					_screen->setScreenPalette(_screen->getPalette(0));
 				}
 
-				_screen->copyBlockToPage(_drawPage, surface->pitch, x, y, width, height, (const byte *)surface->getBasePtr(0, 0));
+				_screen->copyBlockToPage(_drawPage, x, y, *surface);
 			}
 
 			_screen->updateScreen();

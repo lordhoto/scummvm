@@ -989,11 +989,50 @@ void Screen::copyPage(uint8 srcPage, uint8 dstPage) {
 		_forceFullUpdate = true;
 }
 
-void Screen::copyBlockToPage(int pageNum, int x, int y, int w, int h, const uint8 *src) {
-	copyBlockToPage(pageNum, w, x, y, w, h, src);
+void Screen::copyBlockToPage(int pageNum, int x, int y, const Graphics::Surface &surf) {
+	const uint8 *src = (const uint8 *)surf.getBasePtr(0, 0);
+	int h = surf.h;
+	int w = surf.w;
+
+	if (y < 0) {
+		src += (-y) * surf.pitch;
+		h += y;
+		y = 0;
+	} else if (y + h > SCREEN_H) {
+		h = SCREEN_H - y;
+	}
+
+	if (x < 0) {
+		src += -x;
+		w += x;
+		x = 0;
+	} else if (x + w > SCREEN_W) {
+		w = SCREEN_W - x;
+	}
+
+	if (w < 0 || h < 0)
+		return;
+
+	x *= _pageScaleFactor[pageNum];
+	y *= _pageScaleFactor[pageNum];
+	w *= _pageScaleFactor[pageNum];
+	h *= _pageScaleFactor[pageNum];
+
+	uint8 *dst = getPagePtr(pageNum) + y * SCREEN_W * _pageScaleFactor[pageNum] + x;
+
+	if (pageNum == 0 || pageNum == 1)
+		addDirtyRect(x, y, w, h);
+
+	clearOverlayRect(pageNum, x, y, w, h);
+
+	while (h--) {
+		memcpy(dst, src, w);
+		dst += SCREEN_W * _pageScaleFactor[pageNum];
+		src += surf.pitch;
+	}
 }
 
-void Screen::copyBlockToPage(int pageNum, int pitch, int x, int y, int w, int h, const uint8 *src) {
+void Screen::copyBlockToPage(int pageNum, int x, int y, int w, int h, const uint8 *src) {
 	if (y < 0) {
 		src += (-y) * w;
 		h += y;
@@ -1028,7 +1067,7 @@ void Screen::copyBlockToPage(int pageNum, int pitch, int x, int y, int w, int h,
 	while (h--) {
 		memcpy(dst, src, w);
 		dst += SCREEN_W * _pageScaleFactor[pageNum];
-		src += pitch;
+		src += w;
 	}
 }
 

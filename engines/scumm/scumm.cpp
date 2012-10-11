@@ -1859,7 +1859,38 @@ void ScummEngine::setupMusic(int midi) {
 				adlibMidiDriver = MidiDriver::createMidi(MidiDriver::detectDevice(_sound->_musicType == MDT_TOWNS ? MDT_TOWNS : MDT_ADLIB));
 				adlibMidiDriver->property(MidiDriver::PROP_OLD_ADLIB, (_game.features & GF_SMALL_HEADER) ? 1 : 0);
 				// Try to use OPL3 mode for Sam&Max when possible.
-				adlibMidiDriver->property(MidiDriver::PROP_SCUMM_OPL3, (_game.id == GID_SAMNMAX) ? 1 : 0);
+				bool useOpl3 = (_game.id == GID_SAMNMAX);
+				// FIXME: We currently allow selection of OPL2 support in
+				// Sam&Max via "force_opl2" set to "true".
+				//
+				// There are three solutions for this:
+				// 1) Add a new audio device for OPL3, add a new music type,
+				//    GUIO flags, midi driver flags(?) and adapt all code to
+				//    handle this properly.
+				// 2) Use a game specific option. This is confusing though,
+				//    since the option would only apply for AdLib output.
+				// 3) Finally fix our audio output device selection system to
+				//    have a proper type hierachy and then hopefully have a
+				//    better time handling fine grained differences like OPL2
+				//    vs (Dual OPL2 vs) OPL3.
+				//
+				// Solution 2 is similar to what we have now, but it is more
+				// confusing for people browsing all the options than the
+				// current one. The main hope is that people would prefer OPL3
+				// anyway and thus never have to touch their config file, but
+				// for peoply really wanting OPL2 they can still enable it.
+				// It should be trivial to transition to a game specific
+				// option.
+				//
+				// Solution 1 could be implemented "easily", the main work
+				// would be to do all the adaptions. This might also benefit
+				// SCI, though "technically" we use Dual OPL2 instead of OPL3
+				// there. But then we would have a "OPL3/Dual OPL2" device,
+				// which might not be very clear to the user.
+				if (ConfMan.hasKey("force_opl2") && ConfMan.getBool("force_opl2")) {
+					useOpl3 = false;
+				}
+				adlibMidiDriver->property(MidiDriver::PROP_SCUMM_OPL3, useOpl3 ? 1 : 0);
 			} else if (_sound->_musicType == MDT_PCSPK) {
 				adlibMidiDriver = new PcSpkDriver(_mixer);
 			}

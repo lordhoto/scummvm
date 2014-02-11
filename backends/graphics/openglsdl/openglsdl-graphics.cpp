@@ -638,7 +638,7 @@ void OpenGLSdlGraphicsManager::initGLES() {
 
 	// Bind GLES and create the context
 	eglBindAPI(EGL_OPENGL_ES_API);
-	static const EGLint contextParams[] = { EGL_CONTEXT_CLIENT_VERSION, 1, EGL_NONE }; // Use GLES version 1.x
+	static const EGLint contextParams[] = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE }; // Use GLES version 1.x
 	_eglContext = eglCreateContext(_eglDisplay, _eglConfig, EGL_NO_CONTEXT, contextParams);
 	if (_eglContext == EGL_NO_CONTEXT) {
 		warning("Unable to create GLES context");
@@ -676,7 +676,7 @@ const EGLint OpenGLSdlGraphicsManager::_eglConfigAttributes[] = {
 	EGL_BLUE_SIZE,            COLORDEPTH_BLUE_SIZE,
 	EGL_DEPTH_SIZE,           16,
 	EGL_SURFACE_TYPE,         EGL_WINDOW_BIT,
-	EGL_RENDERABLE_TYPE,      EGL_OPENGL_ES_BIT,
+	EGL_RENDERABLE_TYPE,      EGL_OPENGL_ES2_BIT,
 //	EGL_BIND_TO_TEXTURE_RGBA, EGL_TRUE,
 	EGL_NONE
 };

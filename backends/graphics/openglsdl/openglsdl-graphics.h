@@ -30,6 +30,11 @@
 #include "common/array.h"
 #include "common/events.h"
 
+#ifdef USE_EGL
+#include <EGL/egl.h>
+#include <SDL/SDL_syswm.h>
+#endif
+
 class OpenGLSdlGraphicsManager : public OpenGL::OpenGLGraphicsManager, public SdlGraphicsManager, public Common::EventObserver {
 public:
 	OpenGLSdlGraphicsManager(uint desktopWidth, uint desktopHeight, SdlEventSource *eventSource);
@@ -70,6 +75,19 @@ private:
 
 	uint32 _lastVideoModeLoad;
 	SDL_Surface *_hwScreen;
+
+#ifdef USE_EGL
+	EGLDisplay _eglDisplay;
+	EGLConfig _eglConfig;
+	EGLContext _eglContext;
+	EGLSurface _eglSurface;
+	Display *_x11Display;
+
+	void initGLES();
+	void deinitGLES();
+
+	static const EGLint _eglConfigAttributes[];
+#endif
 
 	uint _lastRequestedWidth;
 	uint _lastRequestedHeight;

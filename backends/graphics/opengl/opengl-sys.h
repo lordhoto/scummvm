@@ -43,6 +43,10 @@
 #define ARRAYSIZE(x) ((int)(sizeof(x) / sizeof(x[0])))
 #endif
 
+#ifdef USE_EGL
+#define USE_GLES
+#endif
+
 #if defined(TIZEN)
 #include <FGraphicsOpengl.h>
 using namespace Tizen::Graphics::Opengl;

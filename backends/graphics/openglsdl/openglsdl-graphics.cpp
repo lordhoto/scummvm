@@ -32,15 +32,27 @@ OpenGLSdlGraphicsManager::OpenGLSdlGraphicsManager(uint desktopWidth, uint deskt
     : SdlGraphicsManager(eventSource), _lastVideoModeLoad(0), _hwScreen(nullptr), _lastRequestedWidth(0), _lastRequestedHeight(0),
       _graphicsScale(2), _ignoreLoadVideoMode(false), _gotResize(false), _wantsFullScreen(false), _ignoreResizeEvents(0),
       _desiredFullscreenWidth(0), _desiredFullscreenHeight(0) {
+#ifdef USE_EGL
+	_eglDisplay = 0;
+	_eglConfig = 0;
+	_eglContext = 0;
+	_eglSurface = 0;
+	_x11Display = nullptr;
+#else
 	// Setup OpenGL attributes for SDL
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+#endif
 
 	// Retrieve a list of working fullscreen modes
-	const SDL_Rect *const *availableModes = SDL_ListModes(NULL, SDL_OPENGL | SDL_FULLSCREEN);
+	const SDL_Rect *const *availableModes = SDL_ListModes(NULL,
+#ifdef USE_EGL
+	                                                            SDL_OPENGL |
+#endif
+	                                                            SDL_FULLSCREEN);
 	if (availableModes != (void *)-1) {
 		for (;*availableModes; ++availableModes) {
 			const SDL_Rect *mode = *availableModes;
@@ -205,8 +217,12 @@ void OpenGLSdlGraphicsManager::updateScreen() {
 
 	OpenGLGraphicsManager::updateScreen();
 
+#ifdef USE_EGL
+	eglSwapBuffers(_eglDisplay, _eglSurface);
+#else
 	// Swap OpenGL buffers
 	SDL_GL_SwapBuffers();
+#endif
 }
 
 void OpenGLSdlGraphicsManager::notifyVideoExpose() {
@@ -318,7 +334,13 @@ bool OpenGLSdlGraphicsManager::setupMode(uint width, uint height) {
 	}
 	_lastVideoModeLoad = curTime;
 
-	uint32 flags = SDL_OPENGL;
+	uint32 flags =
+#ifdef USE_EGL
+	               0;
+#else
+	               SDL_OPENGL;
+#endif
+
 	if (_wantsFullScreen) {
 		flags |= SDL_FULLSCREEN;
 	} else {
@@ -331,6 +353,10 @@ bool OpenGLSdlGraphicsManager::setupMode(uint width, uint height) {
 		// We do this because on Windows SDL_SetVideoMode can destroy and
 		// recreate the OpenGL context.
 		notifyContextDestroy();
+
+#ifdef USE_EGL
+		deinitGLES();
+#endif
 	}
 
 	_hwScreen = SDL_SetVideoMode(width, height, 32, flags);
@@ -344,6 +370,9 @@ bool OpenGLSdlGraphicsManager::setupMode(uint width, uint height) {
 	}
 
 	if (_hwScreen) {
+#ifdef USE_EGL
+		initGLES();
+#endif
 		// This is pretty confusing since RGBA8888 talks about the memory
 		// layout here. This is a different logical layout depending on
 		// whether we run on little endian or big endian. However, we can
@@ -563,3 +592,92 @@ bool OpenGLSdlGraphicsManager::isHotkey(const Common::Event &event) {
 
 	return false;
 }
+
+#ifdef USE_EGL
+void OpenGLSdlGraphicsManager::initGLES() {
+	// use EGL to initialize GLES
+	_x11Display = XOpenDisplay(nullptr);
+
+	if (!_x11Display) {
+		warning("Unable to get display");
+		g_system->fatalError();
+	}
+
+	_eglDisplay = eglGetDisplay((EGLNativeDisplayType)_x11Display);
+	if (_eglDisplay == EGL_NO_DISPLAY) {
+		warning("Unable to get EGL display");
+		g_system->fatalError();
+	}
+
+	// Initialize egl
+	if (!eglInitialize(_eglDisplay, nullptr, nullptr)) {
+		warning("Unable to initialize EGL display");
+		g_system->fatalError();
+	}
+
+	// Find a matching config
+	EGLint numConfigsOut = 0;
+	if (eglChooseConfig(_eglDisplay, _eglConfigAttributes, &_eglConfig, 1, &numConfigsOut) != EGL_TRUE || numConfigsOut == 0) {
+		warning("Unable to find appropriate EGL config");
+		g_system->fatalError();
+	}
+
+	// Get the SDL window handle
+	SDL_SysWMinfo sysInfo; //Will hold our Window information
+	SDL_VERSION(&sysInfo.version); //Set SDL version
+	if (SDL_GetWMInfo(&sysInfo) <= 0) {
+		warning("Unable to get window handle");
+		g_system->fatalError();
+	}
+
+	_eglSurface = eglCreateWindowSurface(_eglDisplay, _eglConfig, (EGLNativeWindowType)sysInfo.info.x11.window, 0);
+	if (_eglSurface == EGL_NO_SURFACE) {
+		warning("Unable to create EGL surface");
+		g_system->fatalError();
+	}
+
+	// Bind GLES and create the context
+	eglBindAPI(EGL_OPENGL_ES_API);
+	static const EGLint contextParams[] = { EGL_CONTEXT_CLIENT_VERSION, 1, EGL_NONE }; // Use GLES version 1.x
+	_eglContext = eglCreateContext(_eglDisplay, _eglConfig, EGL_NO_CONTEXT, contextParams);
+	if (_eglContext == EGL_NO_CONTEXT) {
+		warning("Unable to create GLES context");
+		g_system->fatalError();
+	}
+
+	if (eglMakeCurrent(_eglDisplay, _eglSurface, _eglSurface, _eglContext) == EGL_FALSE) {
+		warning("Unable to make GLES context current");
+		g_system->fatalError();
+	}
+}
+
+void OpenGLSdlGraphicsManager::deinitGLES() {
+	eglMakeCurrent(_eglDisplay, nullptr, nullptr, EGL_NO_CONTEXT);
+	eglDestroySurface(_eglDisplay, _eglSurface);
+	eglDestroyContext(_eglDisplay, _eglContext);
+	_eglSurface = 0;
+	_eglContext = 0;
+	_eglConfig = 0;
+	eglTerminate(_eglDisplay);
+	_eglDisplay = 0;
+	XCloseDisplay(_x11Display);
+	_x11Display = nullptr;
+}
+
+#define COLORDEPTH_ALPHA_SIZE 0
+#define COLORDEPTH_RED_SIZE   8
+#define COLORDEPTH_GREEN_SIZE 8
+#define COLORDEPTH_BLUE_SIZE  8
+
+const EGLint OpenGLSdlGraphicsManager::_eglConfigAttributes[] = {
+	EGL_ALPHA_SIZE,           COLORDEPTH_ALPHA_SIZE,
+	EGL_RED_SIZE,             COLORDEPTH_RED_SIZE,
+	EGL_GREEN_SIZE,           COLORDEPTH_GREEN_SIZE,
+	EGL_BLUE_SIZE,            COLORDEPTH_BLUE_SIZE,
+	EGL_DEPTH_SIZE,           16,
+	EGL_SURFACE_TYPE,         EGL_WINDOW_BIT,
+	EGL_RENDERABLE_TYPE,      EGL_OPENGL_ES_BIT,
+//	EGL_BIND_TO_TEXTURE_RGBA, EGL_TRUE,
+	EGL_NONE
+};
+#endif

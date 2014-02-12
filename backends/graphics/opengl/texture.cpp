@@ -23,6 +23,7 @@
 #include "backends/graphics/opengl/texture.h"
 #include "backends/graphics/opengl/extensions.h"
 #include "backends/graphics/opengl/debug.h"
+#include "backends/graphics/opengl/shader.h"
 
 #include "common/rect.h"
 #include "common/textconsole.h"
@@ -187,7 +188,11 @@ void Texture::draw(GLfloat x, GLfloat y, GLfloat w, GLfloat h) {
 		0,        texHeight,
 		texWidth, texHeight
 	};
+#ifdef USE_GLES2
+	GLCALL(glVertexAttribPointer(kTexCoordAttribLocation, 2, GL_FLOAT, GL_FALSE, 0, texcoords));
+#else
 	GLCALL(glTexCoordPointer(2, GL_FLOAT, 0, texcoords));
+#endif
 
 	// Calculate the screen rect where the texture will be drawn.
 	const GLfloat vertices[4*2] = {
@@ -196,7 +201,11 @@ void Texture::draw(GLfloat x, GLfloat y, GLfloat w, GLfloat h) {
 		x,     y + h,
 		x + w, y + h
 	};
+#ifdef USE_GLES2
+	GLCALL(glVertexAttribPointer(kPositionAttribLocation, 2, GL_FLOAT, GL_FALSE, 0, vertices));
+#else
 	GLCALL(glVertexPointer(2, GL_FLOAT, 0, vertices));
+#endif
 
 	// Draw the texture to the screen buffer.
 	GLCALL(glDrawArrays(GL_TRIANGLE_STRIP, 0, 4));

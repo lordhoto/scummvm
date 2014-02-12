@@ -25,6 +25,7 @@
 #include "backends/graphics/opengl/texture.h"
 #include "backends/graphics/opengl/debug.h"
 #include "backends/graphics/opengl/extensions.h"
+#include "backends/graphics/opengl/shader.h"
 
 #include "common/textconsole.h"
 #include "common/translation.h"
@@ -392,13 +393,21 @@ void OpenGLGraphicsManager::updateScreen() {
 		}
 
 		// Set the OSD transparency.
+#ifdef USE_GLES2
+		GLCALL(glVertexAttrib4f(kColorAttribLocation, 1.0f, 1.0f, 1.0f, _osdAlpha / 100.0f));
+#else
 		GLCALL(glColor4f(1.0f, 1.0f, 1.0f, _osdAlpha / 100.0f));
+#endif
 
 		// Draw the OSD texture.
 		_osd->draw(0, 0, _outputScreenWidth, _outputScreenHeight);
 
 		// Reset color.
+#ifdef USE_GLES2
+		GLCALL(glVertexAttrib4f(kColorAttribLocation, 1.0f, 1.0f, 1.0f, 1.0f));
+#else
 		GLCALL(glColor4f(1.0f, 1.0f, 1.0f, 1.0f));
+#endif
 	}
 #endif
 }
@@ -711,6 +720,16 @@ void OpenGLGraphicsManager::setActualScreenSize(uint width, uint height) {
 	// Setup coordinates system.
 	GLCALL(glViewport(0, 0, _outputScreenWidth, _outputScreenHeight));
 
+#ifdef USE_GLES2
+	// Orthogonal projection matrix in column major order.
+	const GLfloat orthoProjection[4*4] = {
+		 2.0f / _outputScreenWidth,  0.0f                      ,  0.0f, 0.0f,
+		 0.0f                     , -2.0f / _outputScreenHeight,  0.0f, 0.0f,
+		 0.0f                     ,  0.0f                      , -1.0f, 0.0f,
+		-1.0f                     ,  1.0f                      ,  0.0f, 1.0f
+	};
+	setProjectionMatrix(orthoProjection);
+#else
 	GLCALL(glMatrixMode(GL_PROJECTION));
 	GLCALL(glLoadIdentity());
 #ifdef USE_GLES
@@ -720,6 +739,7 @@ void OpenGLGraphicsManager::setActualScreenSize(uint width, uint height) {
 #endif
 	GLCALL(glMatrixMode(GL_MODELVIEW));
 	GLCALL(glLoadIdentity());
+#endif
 
 	uint overlayWidth = width;
 	uint overlayHeight = height;
@@ -792,28 +812,46 @@ void OpenGLGraphicsManager::notifyContextCreate(const Graphics::PixelFormat &def
 	// Initialize all extensions.
 	initializeGLExtensions();
 
+#ifdef USE_GLES2
+	// Initialize all shaders.
+	initShaders();
+#endif
+
 	// Disable 3D properties.
 	GLCALL(glDisable(GL_CULL_FACE));
 	GLCALL(glDisable(GL_DEPTH_TEST));
+#ifndef USE_GLES2
 	GLCALL(glDisable(GL_LIGHTING));
 	GLCALL(glDisable(GL_FOG));
 	GLCALL(glDisable(GL_DITHER));
 	GLCALL(glShadeModel(GL_FLAT));
 	GLCALL(glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST));
+#endif
 
 	// Default to black as clear color.
 	GLCALL(glClearColor(0.0f, 0.0f, 0.0f, 0.0f));
+#ifdef USE_GLES2
+	GLCALL(glVertexAttrib4f(kColorAttribLocation, 1.0f, 1.0f, 1.0f, 1.0f));
+#else
 	GLCALL(glColor4f(1.0f, 1.0f, 1.0f, 1.0f));
+#endif
 
 	// Setup alpha blend (for overlay and cursor).
 	GLCALL(glEnable(GL_BLEND));
 	GLCALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
 	// Enable rendering with vertex and coord arrays.
+#ifdef USE_GLES2
+	GLCALL(glActiveTexture(GL_TEXTURE0));
+
+	GLCALL(glEnableVertexAttribArray(kPositionAttribLocation));
+	GLCALL(glEnableVertexAttribArray(kTexCoordAttribLocation));
+#else
 	GLCALL(glEnableClientState(GL_VERTEX_ARRAY));
 	GLCALL(glEnableClientState(GL_TEXTURE_COORD_ARRAY));
 
 	GLCALL(glEnable(GL_TEXTURE_2D));
+#endif
 
 	// We use a "pack" alignment (when reading from textures) to 4 here,
 	// since the only place where we really use it is the BMP screenshot
@@ -854,6 +892,10 @@ void OpenGLGraphicsManager::notifyContextCreate(const Graphics::PixelFormat &def
 }
 
 void OpenGLGraphicsManager::notifyContextDestroy() {
+#ifdef USE_GLES2
+	deinitShaders();
+#endif
+
 	if (_gameScreen) {
 		_gameScreen->releaseInternalTexture();
 	}

@@ -20,40 +20,30 @@
  *
  */
 
-#ifndef BACKENDS_GRAPHICS_OPENGL_OPENGL_H
-#define BACKENDS_GRAPHICS_OPENGL_OPENGL_H
-
-// The purpose of this header is to include the OpenGL headers in an uniform
-// fashion. A notable example for a non standard port is the Tizen port.
+#ifndef BACKENDS_GRAPHICS_OPENGL_SHADER_H
+#define BACKENDS_GRAPHICS_OPENGL_SHADER_H
 
 #include "common/scummsys.h"
 
-#ifdef WIN32
-#if defined(ARRAYSIZE) && !defined(_WINDOWS_)
-#undef ARRAYSIZE
-#endif
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#undef ARRAYSIZE
-#endif
+#ifdef USE_GLES2
 
-// HACK: In case common/util.h has been included already we need to make sure
-// to define ARRAYSIZE again in case of Windows.
-#if !defined(ARRAYSIZE) && defined(COMMON_UTIL_H)
-#define ARRAYSIZE(x) ((int)(sizeof(x) / sizeof(x[0])))
-#endif
+#include "backends/graphics/opengl/opengl-sys.h"
 
-#if defined(TIZEN)
-#include <FGraphicsOpengl.h>
-using namespace Tizen::Graphics::Opengl;
-#elif defined(USE_GLES2)
-#include <GLES2/gl2.h>
-#elif defined(USE_GLES)
-#include <GLES/gl.h>
-#elif defined(SDL_BACKEND)
-#include <SDL_opengl.h>
-#else
-#include <GL/gl.h>
+namespace OpenGL {
+
+enum {
+	kPositionAttribLocation = 0,
+	kTexCoordAttribLocation = 1,
+	kColorAttribLocation    = 2
+};
+
+void initShaders();
+void deinitShaders();
+
+void setProjectionMatrix(const GLfloat *projection);
+
+} // End of namespace OpenGL
+
 #endif
 
 #endif

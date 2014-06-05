@@ -36,7 +36,7 @@
 #include "graphics/pixelformat.h"
 
 
-#define SCUMMVM_THEME_VERSION_STR "SCUMMVM_STX0.8.20"
+#define SCUMMVM_THEME_VERSION_STR "SCUMMVM_STX0.8.21"
 
 class OSystem;
 
@@ -135,6 +135,17 @@ enum TextColor {
 	kTextColorButtonHover,
 	kTextColorButtonDisabled,
 	kTextColorMAX
+};
+
+/**
+ * This is just a wrapper around Graphics::TTFRenderMode. But we need it
+ * because we only define that in case FreeType2 is enabled.
+ * @see Graphics::TTFRenderMode
+ */
+enum FontRenderMode {
+	kFontRenderModeNormal,
+	kFontRenderModeLight,
+	kFontRenderModeMonochrome
 };
 
 class ThemeEngine {
@@ -437,8 +448,9 @@ public:
 	 * @param file              Filename of the non-scalable font version.
 	 * @param scalableFile      Filename of the scalable version. (Optional)
 	 * @param pointsize         Point size for the scalable font. (Optional)
+	 * @param renderMode        The render mode of the scalable font. (Optional)
 	 */
-	bool addFont(TextData textId, const Common::String &file, const Common::String &scalableFile, const int pointsize);
+	bool addFont(TextData textId, const Common::String &file, const Common::String &scalableFile, const int pointsize, const FontRenderMode renderMode);
 
 	/**
 	 * Interface for the ThemeParser class: adds a text color value.
@@ -559,10 +571,10 @@ protected:
 	 */
 	void unloadTheme();
 
-	const Graphics::Font *loadScalableFont(const Common::String &filename, const Common::String &charset, const int pointsize, Common::String &name);
+	const Graphics::Font *loadScalableFont(const Common::String &filename, const Common::String &charset, const int pointsize, const FontRenderMode renderMode, Common::String &name);
 	const Graphics::Font *loadFont(const Common::String &filename, Common::String &name);
 	Common::String genCacheFilename(const Common::String &filename) const;
-	const Graphics::Font *loadFont(const Common::String &filename, const Common::String &scalableFilename, const Common::String &charset, const int pointsize, const bool makeLocalizedFont);
+	const Graphics::Font *loadFont(const Common::String &filename, const Common::String &scalableFilename, const Common::String &charset, const int pointsize, const FontRenderMode renderMode, const bool makeLocalizedFont);
 
 	/**
 	 * Actual Dirty Screen handling function.

@@ -67,6 +67,7 @@ protected:
 					XML_PROP(resolution, false)
 					XML_PROP(scalable_file, false)
 					XML_PROP(point_size, false)
+					XML_PROP(render_mode, false)
 				KEY_END()
 
 				XML_KEY(text_color)

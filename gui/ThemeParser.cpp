@@ -183,8 +183,26 @@ bool ThemeParser::parserCallback_font(ParserNode *node) {
 			return parserError(Common::String::format("Font \"%s\" has invalid point size \"%s\"", node->values["id"].c_str(), node->values["point_size"].c_str()));
 	}
 
+	// Default to light rendering.
+	// TODO: Actually we should default to normal. But that would be
+	// inconsitent with our default in loadTTFFont. We should really
+	// change everything to default to normal.
+	FontRenderMode renderMode = kFontRenderModeLight;
+	if (node->values.contains("render_mode")) {
+		const Common::String renderModeString = node->values["render_mode"];
+		if (renderModeString == "normal") {
+			renderMode = kFontRenderModeNormal;
+		} else if (renderModeString == "light") {
+			renderMode = kFontRenderModeLight;
+		} else if (renderModeString == "monochrome") {
+			renderMode = kFontRenderModeMonochrome;
+		} else {
+			return parserError(Common::String::format("Font \"%s\" has invalid render mode  \"%s\"", node->values["id"].c_str(), renderModeString.c_str()));
+		}
+	}
+
 	TextData textDataId = parseTextDataId(node->values["id"]);
-	if (!_theme->addFont(textDataId, node->values["file"], node->values["scalable_file"], pointsize))
+	if (!_theme->addFont(textDataId, node->values["file"], node->values["scalable_file"], pointsize, renderMode))
 		return parserError("Error loading Font in theme engine.");
 
 	return true;

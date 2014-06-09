@@ -38,6 +38,7 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_GLYPH_H
+#include FT_OUTLINE_H
 
 namespace Graphics {
 
@@ -101,7 +102,7 @@ public:
 	TTFFont();
 	virtual ~TTFFont();
 
-	bool load(Common::SeekableReadStream &stream, int size, uint dpi, TTFRenderMode renderMode, const uint32 *mapping);
+	bool load(Common::SeekableReadStream &stream, int size, uint dpi, TTFRenderMode renderMode, const uint32 *mapping, bool forceBold);
 
 	virtual int getFontHeight() const;
 
@@ -138,12 +139,13 @@ private:
 	FT_Int32 _loadFlags;
 	FT_Render_Mode _renderMode;
 	bool _hasKerning;
+	bool _fakeBold;
 };
 
 TTFFont::TTFFont()
     : _initialized(false), _face(), _ttfFile(0), _size(0), _width(0), _height(0), _ascent(0),
       _descent(0), _glyphs(), _loadFlags(FT_LOAD_TARGET_NORMAL), _renderMode(FT_RENDER_MODE_NORMAL),
-      _hasKerning(false), _allowLateCaching(false) {
+      _hasKerning(false), _fakeBold(false), _allowLateCaching(false) {
 }
 
 TTFFont::~TTFFont() {
@@ -160,7 +162,7 @@ TTFFont::~TTFFont() {
 	}
 }
 
-bool TTFFont::load(Common::SeekableReadStream &stream, int size, uint dpi, TTFRenderMode renderMode, const uint32 *mapping) {
+bool TTFFont::load(Common::SeekableReadStream &stream, int size, uint dpi, TTFRenderMode renderMode, const uint32 *mapping, bool forceBold) {
 	if (!g_ttf.isInitialized())
 		return false;
 
@@ -195,6 +197,11 @@ bool TTFFont::load(Common::SeekableReadStream &stream, int size, uint dpi, TTFRe
 		return false;
 	}
 
+	// Check whether we need to fake a bold font in the Windows way.
+	if (forceBold && !(_face->style_flags & FT_STYLE_FLAG_BOLD)) {
+		_fakeBold = true;
+	}
+
 	// Check whether we have kerning support
 	_hasKerning = (FT_HAS_KERNING(_face) != 0);
 
@@ -227,6 +234,10 @@ bool TTFFont::load(Common::SeekableReadStream &stream, int size, uint dpi, TTFRe
 	_descent = ftCeil26_6(FT_MulFix(_face->descender, yScale));
 
 	_width = ftCeil26_6(FT_MulFix(_face->max_advance_width, _face->size->metrics.x_scale));
+	// When faking bold we increase the width by one pixel.
+	if (_fakeBold) {
+		++_width;
+	}
 	_height = _ascent - _descent + 1;
 
 	if (!mapping) {
@@ -420,6 +431,32 @@ void TTFFont::drawChar(Surface *dst, uint32 chr, int x, int y, uint32 color) con
 	}
 }
 
+namespace {
+
+void blitMono(uint8 *dst, uint dstPitch, const uint8 *src, uint srcPitch, const int w, const int h) {
+	for (int y = 0; y < h; ++y) {
+		const uint8 *curSrc = src;
+		uint8 *curDst = dst;
+		uint8 mask = 0;
+
+		for (int x = 0; x < w; ++x) {
+			if ((x % 8) == 0)
+				mask = *curSrc++;
+
+			if (mask & 0x80)
+				*curDst = 255;
+
+			mask <<= 1;
+			++curDst;
+		}
+
+		src += srcPitch;
+		dst += dstPitch;
+	}
+}
+
+} // End of anonymous namespace
+
 bool TTFFont::cacheGlyph(Glyph &glyph, uint32 chr) const {
 	FT_UInt slot = FT_Get_Char_Index(_face, chr);
 	if (!slot)
@@ -433,19 +470,62 @@ bool TTFFont::cacheGlyph(Glyph &glyph, uint32 chr) const {
 	if (FT_Load_Glyph(_face, slot, _loadFlags))
 		return false;
 
-	if (FT_Render_Glyph(_face->glyph, _renderMode))
+	// In case we fake bold rendering we need to adjust outline fonts and for
+	// bitmap fonts we need to render it twice.
+	FT_Glyph_Metrics metrics = _face->glyph->metrics;
+	int xAdjust = 0;
+	if (_fakeBold) {
+		switch (_face->glyph->format) {
+		case FT_GLYPH_FORMAT_OUTLINE: {
+			// Method taken from http://bugs.winehq.org/show_bug.cgi?id=7520#c28
+			const FT_Pos strength = _face->size->metrics.y_ppem * (1 << 6) / 24;
+			const FT_Error err = FT_Outline_Embolden(&_face->glyph->outline, strength);
+			if (err) {
+				error("Could not embolden outline for faking bold: %d", err);
+			}
+
+			FT_BBox bbox;
+			FT_Outline_Get_CBox(&_face->glyph->outline, &bbox);
+			// We don't need to adjust all these values. However, to avoid
+			// potentional future uses from resulting in crazy values we
+			// just update all of these...
+			metrics.width = bbox.xMax - bbox.xMin;
+			metrics.height = bbox.yMax - bbox.yMin;
+			metrics.horiBearingX = bbox.xMin;
+			metrics.horiBearingY = bbox.yMax;
+			metrics.horiAdvance += (1 << 6);
+			metrics.vertAdvance += (1 << 6);
+			metrics.vertBearingX = metrics.horiBearingX - metrics.horiAdvance / 2;
+			metrics.vertBearingY = (metrics.vertAdvance - metrics.height) / 2;
+			} break;
+
+		case FT_GLYPH_FORMAT_BITMAP:
+			if (_face->glyph->bitmap.pixel_mode != FT_PIXEL_MODE_MONO) {
+				error("Unsupported bitmap pixel mode for faking bold: %d", _face->glyph->bitmap.pixel_mode);
+			}
+			// We will render the glyph twice, like Windows does, thus we
+			// need to adjust all horizontal widths.
+			xAdjust = 1;
+			break;
+
+		default:
+			error("Unsupported glyph format for faking bold: %d", _face->glyph->format);
+		}
+	}
+
+	// We only try to render the gylph when it's not a bitmap already.
+	if (_face->glyph->format != FT_GLYPH_FORMAT_BITMAP && FT_Render_Glyph(_face->glyph, _renderMode))
 		return false;
 
+	// (In)sanity check...
 	if (_face->glyph->format != FT_GLYPH_FORMAT_BITMAP)
 		return false;
 
-	FT_Glyph_Metrics &metrics = _face->glyph->metrics;
-
 	glyph.xOffset = _face->glyph->bitmap_left;
-	int xMax = glyph.xOffset + ftCeil26_6(metrics.width);
+	int xMax = glyph.xOffset + ftCeil26_6(metrics.width) + xAdjust;
 	glyph.yOffset = _ascent - _face->glyph->bitmap_top;
 
-	glyph.advance = ftCeil26_6(_face->glyph->advance.x);
+	glyph.advance = ftCeil26_6(_face->glyph->advance.x) + xAdjust;
 
 	// In case we got a negative xMin we adjust that, this might make some
 	// characters make a bit odd, but it's the only way we can assure no
@@ -459,7 +539,7 @@ bool TTFFont::cacheGlyph(Glyph &glyph, uint32 chr) const {
 	}
 
 	const FT_Bitmap &bitmap = _face->glyph->bitmap;
-	glyph.image.create(bitmap.width, bitmap.rows, PixelFormat::createFormatCLUT8());
+	glyph.image.create(bitmap.width + xAdjust, bitmap.rows, PixelFormat::createFormatCLUT8());
 
 	const uint8 *src = bitmap.buffer;
 	int srcPitch = bitmap.pitch;
@@ -473,22 +553,9 @@ bool TTFFont::cacheGlyph(Glyph &glyph, uint32 chr) const {
 
 	switch (bitmap.pixel_mode) {
 	case FT_PIXEL_MODE_MONO:
-		for (int y = 0; y < bitmap.rows; ++y) {
-			const uint8 *curSrc = src;
-			uint8 mask = 0;
-
-			for (int x = 0; x < bitmap.width; ++x) {
-				if ((x % 8) == 0)
-					mask = *curSrc++;
-
-				if (mask & 0x80)
-					*dst = 255;
-
-				mask <<= 1;
-				++dst;
-			}
-
-			src += srcPitch;
+		blitMono(dst, glyph.image.pitch, src, srcPitch, bitmap.width, bitmap.rows);
+		if (_fakeBold) {
+			blitMono(dst + 1, glyph.image.pitch, src, srcPitch, bitmap.width, bitmap.rows);
 		}
 		break;
 
@@ -520,10 +587,10 @@ void TTFFont::assureCached(uint32 chr) const {
 	}
 }
 
-Font *loadTTFFont(Common::SeekableReadStream &stream, int size, uint dpi, TTFRenderMode renderMode, const uint32 *mapping) {
+Font *loadTTFFont(Common::SeekableReadStream &stream, int size, uint dpi, TTFRenderMode renderMode, const uint32 *mapping, bool forceBold) {
 	TTFFont *font = new TTFFont();
 
-	if (!font->load(stream, size, dpi, renderMode, mapping)) {
+	if (!font->load(stream, size, dpi, renderMode, mapping, forceBold)) {
 		delete font;
 		return 0;
 	}

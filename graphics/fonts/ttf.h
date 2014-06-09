@@ -69,9 +69,11 @@ enum TTFRenderMode {
  *                   loading fails in case no glyph for it is found. When this
  *                   is non-null only characters given in the mapping are
  *                   supported.
+ * @param forceBold  This enables forcing the font as bold in the way Windows
+ *                   does it when a non-bold font is rendered as bold.
  * @return 0 in case loading fails, otherwise a pointer to the Font object.
  */
-Font *loadTTFFont(Common::SeekableReadStream &stream, int size, uint dpi = 0, TTFRenderMode renderMode = kTTFRenderModeLight, const uint32 *mapping = 0);
+Font *loadTTFFont(Common::SeekableReadStream &stream, int size, uint dpi = 0, TTFRenderMode renderMode = kTTFRenderModeLight, const uint32 *mapping = 0, bool forceBold = false);
 
 void shutdownTTF();
 

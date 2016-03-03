@@ -26,6 +26,7 @@
 #include "backends/graphics/opengl/pipelines/pipeline.h"
 #include "backends/graphics/opengl/pipelines/fixed.h"
 #include "backends/graphics/opengl/pipelines/shader.h"
+#include "backends/graphics/opengl/pipelines/libretro.h"
 #include "backends/graphics/opengl/shader.h"
 
 #include "common/textconsole.h"
@@ -42,6 +43,8 @@
 #include "graphics/fontman.h"
 #include "graphics/font.h"
 #endif
+
+#include "backends/graphics/opengl/pipelines/libretro/parser.h"
 
 namespace OpenGL {
 
@@ -400,6 +403,8 @@ void OpenGLGraphicsManager::updateScreen() {
 	// First step: Draw the (virtual) game screen.
 	g_context.getActivePipeline()->drawTexture(_gameScreen->getGLTexture(), _displayX, _displayY + shakeOffset, _displayWidth, _displayHeight);
 
+	// XXX: remove m
+#if 0
 	// Second step: Draw the overlay if visible.
 	if (_overlayVisible) {
 		g_context.getActivePipeline()->drawTexture(_overlay->getGLTexture(), 0, 0, _outputScreenWidth, _outputScreenHeight);
@@ -444,6 +449,7 @@ void OpenGLGraphicsManager::updateScreen() {
 		g_context.getActivePipeline()->setColor(1.0f, 1.0f, 1.0f, 1.0f);
 	}
 #endif
+#endif // XXX: remove me
 
 	refreshScreen();
 }
@@ -852,7 +858,9 @@ void OpenGLGraphicsManager::notifyContextCreate(const Graphics::PixelFormat &def
 #if !USE_FORCED_GLES
 	if (g_context.shadersSupported) {
 		ShaderMan.notifyCreate();
-		_pipeline = new ShaderPipeline(ShaderMan.query(ShaderManager::kDefault));
+		//_pipeline = new ShaderPipeline(ShaderMan.query(ShaderManager::kDefault));
+		//_pipeline = new LibRetroPipeline("shaders/glsl/hqx/hq4x.glslp");
+		_pipeline = new LibRetroPipeline("shaders/glsl/crt/crt-hyllian-glow.glslp");
 	}
 #endif
 

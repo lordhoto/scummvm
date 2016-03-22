@@ -363,6 +363,24 @@ static const SciKernelMapSubEntry kRemapColors_subops[] = {
 };
 
 //    version,         subId, function-mapping,                    signature,              workarounds
+// TODO: [or] is guessed based on what other signatures appear to be using. It
+// would be nice to clarify the difference between 'o' and 'r' and then use
+// the right types in the signatures.
+static const SciKernelMapSubEntry kArray_subops[] = {
+	{ SIG_SCI32,           0, MAP_CALL(ArrayNew),                 "ii",                   NULL },
+	{ SIG_SCI32,           1, MAP_CALL(ArraySize),                "[or]",                 NULL },
+	{ SIG_SCI32,           2, MAP_CALL(ArrayAt),                  "[or]i",                NULL },
+	{ SIG_SCI32,           3, MAP_CALL(ArrayPut),                 "[or]i(i*)",            NULL },
+	{ SIG_SCI32,           4, MAP_CALL(ArrayFree),                "[or]",                 NULL },
+	{ SIG_SCI32,           5, MAP_CALL(ArrayFill),                "[or]ii",               NULL },
+	{ SIG_SCI32,           6, MAP_CALL(ArrayCpy),                 "[or]i[or]ii",          NULL },
+	// TODO: This is unimplemented in SCI21 Middle. Check other interpreters.
+	{ SIG_SCI32,           7, MAP_DUMMY(ArrayCmp),                "(.*)",                 NULL },
+	{ SIG_SCI32,           8, MAP_CALL(ArrayDup),                 "[or]",                 NULL },
+	{ SIG_SCI32,           9, MAP_CALL(ArrayGetData),             "[or]",                 NULL },
+};
+
+//    version,         subId, function-mapping,                    signature,              workarounds
 static const SciKernelMapSubEntry kString_subops[] = {
 	{ SIG_SCI32,           0, MAP_CALL(StringNew),                 "i(i)",                 NULL },
 	{ SIG_SCI32,           1, MAP_CALL(StringSize),                "[or]",                 NULL },
@@ -645,7 +663,7 @@ static SciKernelMapEntry s_kernelMap[] = {
 
 	{ MAP_CALL(AddPlane),          SIG_EVERYWHERE,           "o",                     NULL,            NULL },
 	{ MAP_CALL(AddScreenItem),     SIG_EVERYWHERE,           "o",                     NULL,            NULL },
-	{ MAP_CALL(Array),             SIG_EVERYWHERE,           "(.*)",                  NULL,            NULL },
+	{ MAP_CALL(Array),             SIG_EVERYWHERE,           "(.*)",                  kArray_subops,   NULL },
 	{ MAP_CALL(CreateTextBitmap),  SIG_EVERYWHERE,           "i(.*)",                 NULL,            NULL },
 	{ MAP_CALL(DeletePlane),       SIG_EVERYWHERE,           "o",                     NULL,            NULL },
 	{ MAP_CALL(DeleteScreenItem),  SIG_EVERYWHERE,           "o",                     NULL,            NULL },

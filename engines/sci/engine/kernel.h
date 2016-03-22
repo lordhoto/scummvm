@@ -421,8 +421,19 @@ reg_t kStubNull(EngineState *s, int argc, reg_t *argv);
 #ifdef ENABLE_SCI32
 // SCI2 Kernel Functions
 reg_t kIsHiRes(EngineState *s, int argc, reg_t *argv);
-reg_t kArray(EngineState *s, int argc, reg_t *argv);
 reg_t kListAt(EngineState *s, int argc, reg_t *argv);
+
+reg_t kArray(EngineState *s, int argc, reg_t *argv);
+reg_t kArrayNew(EngineState *s, int argc, reg_t *argv);
+reg_t kArraySize(EngineState *s, int argc, reg_t *argv);
+reg_t kArrayAt(EngineState *s, int argc, reg_t *argv);
+reg_t kArrayPut(EngineState *s, int argc, reg_t *argv);
+reg_t kArrayFree(EngineState *s, int argc, reg_t *argv);
+reg_t kArrayFill(EngineState *s, int argc, reg_t *argv);
+reg_t kArrayCpy(EngineState *s, int argc, reg_t *argv);
+reg_t kArrayDup(EngineState *s, int argc, reg_t *argv);
+reg_t kArrayGetData(EngineState *s, int argc, reg_t *argv);
+
 reg_t kString(EngineState *s, int argc, reg_t *argv);
 
 reg_t kStringNew(EngineState *s, int argc, reg_t *argv);

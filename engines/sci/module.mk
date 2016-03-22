@@ -81,6 +81,7 @@ MODULE_OBJS := \
 
 ifdef ENABLE_SCI32
 MODULE_OBJS += \
+	engine/karray32.o \
 	engine/kgraphics32.o \
 	graphics/celobj32.o \
 	graphics/controls32.o \

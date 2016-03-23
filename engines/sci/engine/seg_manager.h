@@ -430,9 +430,10 @@ public:
 	reg_t getParserPtr() const { return _parserPtr; }
 
 #ifdef ENABLE_SCI32
-	SciArray<reg_t> *allocateArray(reg_t *addr);
-	SciArray<reg_t> *lookupArray(reg_t addr);
+	Array32 *allocateArray(uint type, reg_t *addr);
+	Array32 *lookupArray(reg_t addr);
 	void freeArray(reg_t addr);
+
 	SciString *allocateString(reg_t *addr);
 	SciString *lookupString(reg_t addr);
 	void freeString(reg_t addr);

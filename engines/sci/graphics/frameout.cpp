@@ -54,6 +54,10 @@
 #include "sci/graphics/frameout.h"
 #include "sci/video/robot_decoder.h"
 
+#if ENABLE_SCI32
+#include "sci/engine/karray32.h"
+#endif
+
 namespace Sci {
 
 static int dissolveSequences[2][20] = {
@@ -1181,7 +1185,7 @@ void GfxFrameout::kernelSetShowStyle(const uint16 argc, const reg_t planeObj, co
 				// NOTE: SCI2.1mid engine does no check to verify that an array is
 				// successfully retrieved, and SegMan will cause a fatal error
 				// if we try to use a memory segment that is not an array
-				SciArray<reg_t> *table = _segMan->lookupArray(pFadeArray);
+				Array32 *const table = _segMan->lookupArray(pFadeArray);
 
 				uint32 rangeCount = table->getSize();
 				entry->fadeColorRangesCount = rangeCount;
@@ -1192,7 +1196,7 @@ void GfxFrameout::kernelSetShowStyle(const uint16 argc, const reg_t planeObj, co
 				if (rangeCount > 0) {
 					entry->fadeColorRanges = new uint16[rangeCount];
 					for (size_t i = 0; i < rangeCount; ++i) {
-						entry->fadeColorRanges[i] = table->getValue(i).toUint16();
+						entry->fadeColorRanges[i] = table->getElement(i).toUint16();
 					}
 				}
 			} else {

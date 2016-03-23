@@ -497,8 +497,11 @@ public:
 	void fromString(const Common::String &string);
 };
 
-struct ArrayTable : public SegmentObjTable<SciArray<reg_t> > {
-	ArrayTable() : SegmentObjTable<SciArray<reg_t> >(SEG_TYPE_ARRAY) {}
+class Array32;
+
+struct ArrayTable : public SegmentObjTable<Array32 *> {
+	ArrayTable() : SegmentObjTable<Array32 *>(SEG_TYPE_ARRAY) {}
+	~ArrayTable();
 
 	virtual void freeAtAddress(SegManager *segMan, reg_t sub_addr);
 	virtual Common::Array<reg_t> listAllOutgoingReferences(reg_t object) const;

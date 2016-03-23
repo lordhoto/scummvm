@@ -37,6 +37,7 @@ struct EngineState;
  *
  * Version - new/changed feature
  * =============================
+ *      35 - new SCI32 array segment format
  *      34 - SCI32 palettes, and store play time in ticks
  *      33 - new overridePriority flag in MusicEntry
  *      32 - new playBed flag in MusicEntry
@@ -59,7 +60,7 @@ struct EngineState;
  */
 
 enum {
-	CURRENT_SAVEGAME_VERSION = 34,
+	CURRENT_SAVEGAME_VERSION = 35,
 	MINIMUM_SAVEGAME_VERSION = 14
 };
 
@@ -101,6 +102,13 @@ void gamestate_restore(EngineState *s, Common::SeekableReadStream *save);
  * Read the header from a savegame.
  */
 bool get_savegame_metadata(Common::SeekableReadStream* stream, SavegameMetadata* meta);
+
+
+#pragma mark - Serialization helpers
+
+void syncWithSerializer(Common::Serializer &s, byte &val);
+void syncWithSerializer(Common::Serializer &s, uint16 &val);
+void syncWithSerializer(Common::Serializer &s, reg_t &obj);
 
 
 } // End of namespace Sci

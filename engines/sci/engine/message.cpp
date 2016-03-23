@@ -26,6 +26,10 @@
 #include "sci/engine/seg_manager.h"
 #include "sci/util.h"
 
+#if ENABLE_SCI32
+#include "sci/engine/karray32.h"
+#endif
+
 namespace Sci {
 
 struct MessageRecord {
@@ -446,13 +450,14 @@ void MessageState::outputString(reg_t buf, const Common::String &str) {
 				sciString->setValue(i, str.c_str()[i]);
 			sciString->setValue(str.size(), 0);
 		} else if (_segMan->getSegmentType(buf.getSegment()) == SEG_TYPE_ARRAY) {
+			// TODO: Check whether the original accepted an raw array here.
 			// Happens in the intro of LSL6, we are asked to write the string
 			// into an array
-			SciArray<reg_t> *sciString = _segMan->lookupArray(buf);
+			Array32 *sciString = _segMan->lookupArray(buf);
 			sciString->setSize(str.size() + 1);
 			for (uint32 i = 0; i < str.size(); i++)
-				sciString->setValue(i, make_reg(0, str.c_str()[i]));
-			sciString->setValue(str.size(), NULL_REG);
+				sciString->setElement(i, make_reg(0, str.c_str()[i]));
+			sciString->setElement(str.size(), NULL_REG);
 		}
 	} else {
 #endif

@@ -53,6 +53,7 @@
 #include "video/avi_decoder.h"
 #include "sci/video/seq_decoder.h"
 #ifdef ENABLE_SCI32
+#include "sci/engine/karray32.h"
 #include "sci/graphics/frameout.h"
 #include "video/coktel_decoder.h"
 #include "sci/video/robot_decoder.h"
@@ -2798,8 +2799,13 @@ bool Console::cmdViewReference(int argc, const char **argv) {
 				}
 				case SEG_TYPE_ARRAY: {
 					debugPrintf("SCI32 array:\n");
-					const SciArray<reg_t> *array = _engine->_gamestate->_segMan->lookupArray(reg);
-					hexDumpReg(array->getRawData(), array->getSize(), 4, 0, true);
+					const Array32 *array = _engine->_gamestate->_segMan->lookupArray(reg);
+					if (array->getType() == Array32::kTypeID) {
+						hexDumpReg((const reg_t *)array->getStoragePointer(), array->getSize(), 4, 0, true);
+					} else {
+						// TODO: Dump int arrays properly
+						Common::hexdump((const byte *)array->getStoragePointer(), array->getStorageSize(), 16, 0);
+					}
 					break;
 				}
 #endif

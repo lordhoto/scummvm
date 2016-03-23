@@ -25,6 +25,10 @@
 #include "sci/engine/state.h"
 #include "sci/engine/script.h"
 
+#ifdef ENABLE_SCI32
+#include "sci/engine/karray32.h"
+#endif
+
 namespace Sci {
 
 
@@ -861,22 +865,24 @@ bool SegManager::freeDynmem(reg_t addr) {
 }
 
 #ifdef ENABLE_SCI32
-SciArray<reg_t> *SegManager::allocateArray(reg_t *addr) {
+Array32 *SegManager::allocateArray(uint type, reg_t *addr) {
 	ArrayTable *table;
-	int offset;
 
 	if (!_arraysSegId) {
-		table = (ArrayTable *)allocSegment(new ArrayTable(), &(_arraysSegId));
-	} else
+		table = (ArrayTable *)allocSegment(new ArrayTable(), &_arraysSegId);
+	} else {
 		table = (ArrayTable *)_heap[_arraysSegId];
+	}
 
-	offset = table->allocEntry();
+	int offset = table->allocEntry();
+	Array32 *&result = table->at(offset);
+	result = Array32::makeArray(type);
 
 	*addr = make_reg(_arraysSegId, offset);
-	return &table->at(offset);
+	return result;
 }
 
-SciArray<reg_t> *SegManager::lookupArray(reg_t addr) {
+Array32 *SegManager::lookupArray(reg_t addr) {
 	if (_heap[addr.getSegment()]->getType() != SEG_TYPE_ARRAY)
 		error("Attempt to use non-array %04x:%04x as array", PRINT_REG(addr));
 
@@ -885,7 +891,7 @@ SciArray<reg_t> *SegManager::lookupArray(reg_t addr) {
 	if (!arrayTable.isValidEntry(addr.getOffset()))
 		error("Attempt to use non-array %04x:%04x as array", PRINT_REG(addr));
 
-	return &(arrayTable[addr.getOffset()]);
+	return arrayTable[addr.getOffset()];
 }
 
 void SegManager::freeArray(reg_t addr) {
@@ -897,8 +903,8 @@ void SegManager::freeArray(reg_t addr) {
 	if (!arrayTable.isValidEntry(addr.getOffset()))
 		error("Attempt to use non-array %04x:%04x as array", PRINT_REG(addr));
 
-	arrayTable[addr.getOffset()].destroy();
-	arrayTable.freeEntry(addr.getOffset());
+	// TODO: This should really be freeEntry.
+	arrayTable.freeAtAddress(this, addr);
 }
 
 SciString *SegManager::allocateString(reg_t *addr) {

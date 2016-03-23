@@ -31,6 +31,10 @@
 #include "sci/engine/seg_manager.h"
 #include "sci/engine/state.h"
 
+#if ENABLE_SCI32
+#include "sci/engine/karray32.h"
+#endif
+
 namespace Sci {
 
 //#define GC_DEBUG // Debug garbage collection
@@ -249,16 +253,26 @@ SegmentRef DynMem::dereference(reg_t pointer) {
 
 #ifdef ENABLE_SCI32
 
+ArrayTable::~ArrayTable() {
+	for (ArrayType::iterator i = _table.begin(), end = _table.end(); i != end; ++i) {
+		delete i->data;
+	}
+}
+
 SegmentRef ArrayTable::dereference(reg_t pointer) {
+	Array32 *array = at(pointer.getOffset());
+
 	SegmentRef ret;
-	ret.isRaw = false;
-	ret.maxSize = at(pointer.getOffset()).getSize() * 2;
-	ret.reg = at(pointer.getOffset()).getRawData();
+	ret.isRaw = array->isRawData();
+	ret.maxSize = array->getStorageSize();
+	ret.raw = (byte *)array->getStoragePointer();
 	return ret;
 }
 
 void ArrayTable::freeAtAddress(SegManager *segMan, reg_t sub_addr) {
-	at(sub_addr.getOffset()).destroy();
+	Array32 *&array = at(sub_addr.getOffset());
+	delete array;
+	array = nullptr;
 	freeEntry(sub_addr.getOffset());
 }
 
@@ -268,12 +282,12 @@ Common::Array<reg_t> ArrayTable::listAllOutgoingReferences(reg_t addr) const {
 		error("Invalid array referenced for outgoing references: %04x:%04x", PRINT_REG(addr));
 	}
 
-	const SciArray<reg_t> *array = &at(addr.getOffset());
-
-	for (uint32 i = 0; i < array->getSize(); i++) {
-		reg_t value = array->getValue(i);
-		if (value.getSegment() != 0)
-			tmp.push_back(value);
+	// TODO: Ugly, we should implement this in Array32's interface.
+	const Array32 *array = at(addr.getOffset());
+	if (array->getType() == Array32::kTypeID) {
+		for (uint i = 0, size = array->getSize(); i < size; ++i) {
+			tmp.push_back(array->getElement(i));
+		}
 	}
 
 	return tmp;

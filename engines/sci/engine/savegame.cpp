@@ -48,6 +48,7 @@
 #include "sci/sound/music.h"
 
 #ifdef ENABLE_SCI32
+#include "sci/engine/karray32.h"
 #include "sci/graphics/palette32.h"
 #include "sci/graphics/frameout.h"
 #endif
@@ -70,6 +71,14 @@ void syncWithSerializer(Common::Serializer &s, Common::Serializable &obj) {
 // above.
 void syncWithSerializer(Common::Serializer &s, Object &obj) {
 	obj.saveLoadWithSerializer(s);
+}
+
+void syncWithSerializer(Common::Serializer &s, byte &val) {
+	s.syncAsByte(val);
+}
+
+void syncWithSerializer(Common::Serializer &s, uint16 &val) {
+	s.syncAsUint16LE(val);
 }
 
 void syncWithSerializer(Common::Serializer &s, reg_t &obj) {
@@ -101,36 +110,32 @@ void syncWithSerializer(Common::Serializer &s, Node &obj) {
 }
 
 #ifdef ENABLE_SCI32
-void syncWithSerializer(Common::Serializer &s, SciArray<reg_t> &obj) {
-	byte type = 0;
-	uint32 size = 0;
+void syncWithSerializer(Common::Serializer &s, Array32 *&obj) {
+	byte type;
 
 	if (s.isSaving()) {
-		type = (byte)obj.getType();
-		size = obj.getSize();
+		if (obj) {
+			type = obj->getType();
+		} else {
+			type = 0xFF;
+		}
 	}
+
 	s.syncAsByte(type);
-	s.syncAsUint32LE(size);
+
 	if (s.isLoading()) {
-		obj.setType((int8)type);
-
-		// HACK: Skip arrays that have a negative type
-		if ((int8)type < 0)
-			return;
-
-		obj.setSize(size);
+		// Versions prior to 35 always stored a size, even when the element in
+		// the table does not exist. Thus we need to skip the size when the
+		// element is unused.
+		if (type == 0xFF) {
+			s.skip(4, 18, 34);
+		} else {
+			obj = Array32::makeArray(type);
+		}
 	}
 
-	for (uint32 i = 0; i < size; i++) {
-		reg_t value;
-
-		if (s.isSaving())
-			value = obj.getValue(i);
-
-		syncWithSerializer(s, value);
-
-		if (s.isLoading())
-			obj.setValue(i, value);
+	if (obj) {
+		obj->saveLoadWithSerializer(s);
 	}
 }
 

@@ -28,6 +28,10 @@
 #include "sci/graphics/palette.h"
 #include "sci/graphics/screen.h"
 
+#ifdef ENABLE_SCI32
+#include "sci/engine/karray32.h"
+#endif
+
 #include "common/debug-channels.h"
 #include "common/list.h"
 #include "common/system.h"
@@ -284,25 +288,37 @@ struct PathfindingState {
 
 static Common::Point readPoint(SegmentRef list_r, int offset) {
 	Common::Point point;
+	assert(list_r.isRaw);
 
-	if (list_r.isRaw) {	// dynmem blocks are raw
+#if ENABLE_SCI32
+	// CHECKME: Can SCI2+ pass data through non-Array32 sources?
+	if (getSciVersion() >= SCI_VERSION_2) {
+		point.x = READ_UINT16(list_r.raw + offset * POLY_POINT_SIZE + 0);
+		point.y = READ_UINT16(list_r.raw + offset * POLY_POINT_SIZE + 2);
+	} else {
+#endif
 		point.x = (int16)READ_SCIENDIAN_UINT16(list_r.raw + offset * POLY_POINT_SIZE);
 		point.y = (int16)READ_SCIENDIAN_UINT16(list_r.raw + offset * POLY_POINT_SIZE + 2);
-	} else {
-		point.x = list_r.reg[offset * 2].toUint16();
-		point.y = list_r.reg[offset * 2 + 1].toUint16();
+#if ENABLE_SCI32
 	}
+#endif
 	return point;
 }
 
 static void writePoint(SegmentRef ref, int offset, const Common::Point &point) {
-	if (ref.isRaw) {	// dynmem blocks are raw
+	assert(ref.isRaw);
+#if ENABLE_SCI32
+	// CHECKME: Can SCI2+ write data to anything non-Array32?
+	if (getSciVersion() >= SCI_VERSION_2) {
+		WRITE_UINT16(ref.raw + offset * POLY_POINT_SIZE + 0, point.x);
+		WRITE_UINT16(ref.raw + offset * POLY_POINT_SIZE + 2, point.y);
+	} else {
+#endif
 		WRITE_SCIENDIAN_UINT16(ref.raw + offset * POLY_POINT_SIZE, point.x);
 		WRITE_SCIENDIAN_UINT16(ref.raw + offset * POLY_POINT_SIZE + 2, point.y);
-	} else {
-		ref.reg[offset * 2] = make_reg(0, point.x);
-		ref.reg[offset * 2 + 1] = make_reg(0, point.y);
+#if ENABLE_SCI32
 	}
+#endif
 }
 
 static void draw_line(EngineState *s, Common::Point p1, Common::Point p2, int type, int width, int height) {
@@ -1397,9 +1413,8 @@ static reg_t allocateOutputArray(SegManager *segMan, int size) {
 
 #ifdef ENABLE_SCI32
 	if (getSciVersion() >= SCI_VERSION_2) {
-		SciArray<reg_t> *array = segMan->allocateArray(&addr);
+		Array32 *array = segMan->allocateArray(Array32::kTypeInt, &addr);
 		assert(array);
-		array->setType(0);
 		array->setSize(size * 2);
 		return addr;
 	}

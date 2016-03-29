@@ -329,9 +329,6 @@ private:
 
 	// Hash generation
 	std::string getHash(std::string key);
-#ifdef MACOSX
-	std::string md5(std::string key);
-#endif
 	std::string newHash(const std::string &key) const;
 
 	// Output

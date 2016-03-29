@@ -1065,7 +1065,7 @@ std::string XcodeProvider::getHash(std::string key) {
 #ifdef MACOSX
 	std::string hash = md5(key);
 #else
-	std::string hash = newHash();
+	std::string hash = newHash(key);
 #endif
 
 	_hashDictionnary[key] = hash;
@@ -1089,8 +1089,8 @@ std::string XcodeProvider::md5(std::string key) {
 }
 #endif
 
-std::string XcodeProvider::newHash() const {
-	std::string hash = createUUID();
+std::string XcodeProvider::newHash(const std::string &key) const {
+	std::string hash = createUUID(key);
 
 	// Remove { and - from UUID and resize to 96-bits uppercase hex string
 	hash.erase(remove_if(hash.begin(), hash.end(), isSeparator), hash.end());

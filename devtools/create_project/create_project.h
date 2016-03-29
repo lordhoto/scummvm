@@ -524,9 +524,10 @@ protected:
 	/**
 	 * Creates an UUID and returns it in string representation.
 	 *
+	 * @param name Name to use as base for UUID generation.
 	 * @return A new UUID as string.
 	 */
-	std::string createUUID() const;
+	std::string createUUID(const std::string &name) const;
 
 private:
 	/**

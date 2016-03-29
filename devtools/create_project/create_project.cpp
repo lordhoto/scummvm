@@ -36,6 +36,7 @@
 #include "visualstudio.h"
 #include "msbuild.h"
 #include "xcode.h"
+#include "sha1.h"
 
 #include <fstream>
 #include <iostream>
@@ -93,11 +94,6 @@ enum ProjectType {
 };
 
 int main(int argc, char *argv[]) {
-#ifndef USE_WIN32_API
-	// Initialize random number generator for UUID creation
-	std::srand((unsigned int)std::time(0));
-#endif
-
 	if (argc < 2) {
 		displayHelp(argv[0]);
 		return -1;
@@ -1301,7 +1297,7 @@ void ProjectProvider::createProject(BuildSetup &setup) {
 	}
 
 	// We also need to add the UUID of the main project file.
-	const std::string svmUUID = _uuidMap[setup.projectName] = createUUID();
+	const std::string svmUUID = _uuidMap[setup.projectName] = createUUID(setup.projectName);
 
 	createWorkspace(setup);
 
@@ -1385,7 +1381,7 @@ ProjectProvider::UUIDMap ProjectProvider::createUUIDMap(const BuildSetup &setup)
 		if (!i->enable || isSubEngine(i->name, setup.engines))
 			continue;
 
-		result[i->name] = createUUID();
+		result[i->name] = createUUID(i->name);
 	}
 
 	return result;
@@ -1399,46 +1395,30 @@ ProjectProvider::UUIDMap ProjectProvider::createToolsUUIDMap() const {
 		if (!i->enable)
 			continue;
 
-		result[i->name] = createUUID();
+		result[i->name] = createUUID(i->name);
 	}
 
 	return result;
 }
 
-std::string ProjectProvider::createUUID() const {
-#ifdef USE_WIN32_API
-	UUID uuid;
-	if (UuidCreate(&uuid) != RPC_S_OK)
-		error("UuidCreate failed");
+std::string ProjectProvider::createUUID(const std::string &name) const {
+	// This implements a pseudo UUID v5 generation scheme. We do not use any
+	// namespace ID but otherwise use UUID v5's scheme.
+	SHA1 sha1;
+	sha1.addBytes(name.c_str(), name.size());
+	unsigned char *sha1sum = sha1.getDigest();
 
-	unsigned char *string = 0;
-	if (UuidToStringA(&uuid, &string) != RPC_S_OK)
-		error("UuidToStringA failed");
+	// Mark as UUID v5 version variant.
+	sha1sum[6] = 0x05;
+	sha1sum[8] = (sha1sum[8] & 0x3F) | 0x80;
 
-	std::string result = std::string((char *)string);
-	std::transform(result.begin(), result.end(), result.begin(), toupper);
-	RpcStringFreeA(&string);
+	char result[64];
+	snprintf(result, sizeof(result), "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+			 sha1sum[0], sha1sum[1], sha1sum[2], sha1sum[3], sha1sum[4], sha1sum[5], sha1sum[6], sha1sum[7],
+	         sha1sum[8], sha1sum[9], sha1sum[10], sha1sum[11], sha1sum[12], sha1sum[13], sha1sum[14], sha1sum[15]);
+	free(sha1sum);
+
 	return result;
-#else
-	unsigned char uuid[16];
-
-	for (int i = 0; i < 16; ++i)
-		uuid[i] = (unsigned char)((std::rand() / (double)(RAND_MAX)) * 0xFF);
-
-	uuid[8] &= 0xBF; uuid[8] |= 0x80;
-	uuid[6] &= 0x4F; uuid[6] |= 0x40;
-
-	std::stringstream uuidString;
-	uuidString << std::hex << std::uppercase << std::setfill('0');
-	for (int i = 0; i < 16; ++i) {
-		uuidString << std::setw(2) << (int)uuid[i];
-		if (i == 3 || i == 5 || i == 7 || i == 9) {
-			uuidString << std::setw(0) << '-';
-		}
-	}
-
-	return uuidString.str();
-#endif
 }
 
 std::string ProjectProvider::getLastPathComponent(const std::string &path) {

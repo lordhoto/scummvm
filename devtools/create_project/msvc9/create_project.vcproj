@@ -182,6 +182,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\sha1.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\visualstudio.cpp"
 				>
 			</File>
@@ -213,6 +217,10 @@
 			</File>
 			<File
 				RelativePath="..\msbuild.h"
+				>
+			</File>
+			<File
+				RelativePath="..\sha1.h"
 				>
 			</File>
 			<File

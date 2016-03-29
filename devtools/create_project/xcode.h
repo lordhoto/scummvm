@@ -332,7 +332,7 @@ private:
 #ifdef MACOSX
 	std::string md5(std::string key);
 #endif
-	std::string newHash() const;
+	std::string newHash(const std::string &key) const;
 
 	// Output
 	std::string writeProperty(const std::string &variable, Property &property, int flags = 0) const;

@@ -234,7 +234,7 @@ void MSBuildProvider::createFiltersFile(const BuildSetup &setup, const std::stri
 	filters << "\t<ItemGroup>\n";
 	for (std::list<std::string>::iterator filter = _filters.begin(); filter != _filters.end(); ++filter) {
 		filters << "\t\t<Filter Include=\"" << *filter << "\">\n"
-		           "\t\t\t<UniqueIdentifier>" << createUUID() << "</UniqueIdentifier>\n"
+		           "\t\t\t<UniqueIdentifier>" << createUUID(*filter) << "</UniqueIdentifier>\n"
 		           "\t\t</Filter>\n";
 	}
 	filters << "\t</ItemGroup>\n";

@@ -50,6 +50,7 @@
 #include "sci/graphics/text16.h"
 #include "sci/graphics/view.h"
 #ifdef ENABLE_SCI32
+#include "sci/engine/karray32.h"
 #include "sci/graphics/celobj32.h"
 #include "sci/graphics/controls32.h"
 #include "sci/graphics/font.h"	// TODO: remove once kBitmap is moved in a separate class
@@ -217,17 +218,23 @@ reg_t kText(EngineState *s, int argc, reg_t *argv) {
 reg_t kTextSize32(EngineState *s, int argc, reg_t *argv) {
 	g_sci->_gfxText32->setFont(argv[2].toUint16());
 
-	reg_t *rect = s->_segMan->derefRegPtr(argv[0], 4);
-
 	Common::String text = s->_segMan->getString(argv[1]);
 	int16 maxWidth = argc > 3 ? argv[3].toSint16() : 0;
 	bool doScaling = argc > 4 ? argv[4].toSint16() : true;
 
 	Common::Rect textRect = g_sci->_gfxText32->getTextSize(text, maxWidth, doScaling);
-	rect[0] = make_reg(0, textRect.left);
-	rect[1] = make_reg(0, textRect.top);
-	rect[2] = make_reg(0, textRect.right - 1);
-	rect[3] = make_reg(0, textRect.bottom - 1);
+
+	Array32 *const array = s->_segMan->lookupArray(argv[0]);
+	// NOTE: We check whether we write to an integer array. The original did
+	// not do any error checking.
+	if (array->getType() != Array32::kTypeInt) {
+		error("kTextSize32: Destination is not an integer array");
+	}
+
+	array->setElement(0, make_reg(0, textRect.left));
+	array->setElement(1, make_reg(0, textRect.top));
+	array->setElement(2, make_reg(0, textRect.right - 1));
+	array->setElement(3, make_reg(0, textRect.bottom - 1));
 	return s->r_acc;
 }
 

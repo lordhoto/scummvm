@@ -34,6 +34,7 @@
 
 #include "sci/sci.h"
 #include "sci/console.h"
+#include "sci/engine/karray32.h"
 #include "sci/engine/kernel.h"
 #include "sci/engine/state.h"
 #include "sci/engine/selector.h"
@@ -53,10 +54,6 @@
 #include "sci/graphics/screen_item32.h"
 #include "sci/graphics/frameout.h"
 #include "sci/video/robot_decoder.h"
-
-#if ENABLE_SCI32
-#include "sci/engine/karray32.h"
-#endif
 
 namespace Sci {
 
